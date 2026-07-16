@@ -27,18 +27,22 @@ export function Metas({
   const [monto, setMonto] = useState('')
   const [confirmDel, setConfirmDel] = useState<string | null>(null)
 
-  // formulario nueva meta/deuda
   const [nombre, setNombre] = useState('')
   const [objetivo, setObjetivo] = useState('')
   const [emoji, setEmoji] = useState('✈️')
+  const [emojiLibre, setEmojiLibre] = useState('')
 
-  const resetForm = () => { setNombre(''); setObjetivo(''); setEmoji('✈️'); setShowNew(false) }
+  const resetForm = () => { setNombre(''); setObjetivo(''); setEmoji('✈️'); setEmojiLibre(''); setShowNew(false) }
 
   const crear = () => {
     const target = parseFloat(objetivo)
     if (!nombre.trim() || isNaN(target) || target <= 0) return
-    if (vista === 'metas') onAddGoal({ name: nombre.trim(), emoji, target })
-    else onAddDebt({ name: nombre.trim(), total: target })
+    if (vista === 'metas') {
+      const em = [...emojiLibre.trim()].slice(0, 2).join('') || emoji
+      onAddGoal({ name: nombre.trim(), emoji: em, target })
+    } else {
+      onAddDebt({ name: nombre.trim(), total: target })
+    }
     resetForm()
   }
 
@@ -60,7 +64,9 @@ export function Metas({
     <div className="screen">
       <h1>{vista === 'metas' ? 'Metas de ahorro' : 'Deudas'}</h1>
       <div className="sub" style={{ marginBottom: 12 }}>
-        {vista === 'metas' ? 'Sueños con fecha de entrega 🌟' : 'Aquí se vienen a morir las deudas ⚔️'}
+        {vista === 'metas'
+          ? 'Sueños con fecha de entrega 🌟 (los abonos quedan en Movimientos)'
+          : 'Aquí se vienen a morir las deudas ⚔️ (los pagos quedan en Movimientos)'}
       </div>
 
       <div className="seg">
@@ -137,7 +143,7 @@ export function Metas({
             </div>
             {it.done && (
               <div className="mini" style={{ color: 'var(--verde)', marginTop: 6, fontWeight: 800 }}>
-                {vista === 'metas' ? '¡Meta cumplida! El gato está orgulloso. 😻' : '¡Deuda saldada! Libre como gato. 🕊️'}
+                {vista === 'metas' ? '¡Meta cumplida! Nube está orgullosa. 😻' : '¡Deuda saldada! Libre como gato. 🕊️'}
               </div>
             )}
           </div>
@@ -160,13 +166,19 @@ export function Metas({
           {vista === 'metas' && (
             <div className="field">
               <label>Ícono</label>
-              <div className="chips">
+              <div className="chips" style={{ marginBottom: 8 }}>
                 {GOAL_EMOJIS.map((e) => (
-                  <button key={e} className={`chip ${emoji === e ? 'on' : ''}`} onClick={() => setEmoji(e)}>
+                  <button key={e} className={`chip ${emoji === e && !emojiLibre ? 'on' : ''}`} onClick={() => { setEmoji(e); setEmojiLibre('') }}>
                     {e}
                   </button>
                 ))}
               </div>
+              <input
+                type="text"
+                placeholder="…o escribe cualquier emoji de tu teclado 🐹⚽🍕"
+                value={emojiLibre}
+                onChange={(e) => setEmojiLibre(e.target.value)}
+              />
             </div>
           )}
           <div className="field">

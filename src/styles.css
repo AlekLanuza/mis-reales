@@ -144,13 +144,13 @@ h2 { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
 .tabbar button {
   background: none; border: none; font: inherit; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  font-size: 10.5px; font-weight: 700; color: var(--muted);
-  padding: 4px 8px; border-radius: 12px; min-width: 56px;
+  font-size: 10px; font-weight: 700; color: var(--muted);
+  padding: 4px 2px; border-radius: 12px; min-width: 0; flex: 1;
 }
-.tabbar button .ico { font-size: 21px; line-height: 1; }
+.tabbar button .ico { font-size: 20px; line-height: 1; }
 .tabbar button.active { color: var(--accent); }
 .tabbar .fab {
-  background: var(--accent); color: #fff; width: 54px; height: 54px; min-width: 54px;
+  background: var(--accent); color: #fff; width: 54px; height: 54px; min-width: 54px; max-width: 54px; flex: none;
   border-radius: 50%; font-size: 28px; font-weight: 700;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 6px 16px rgba(255, 122, 47, 0.45);
@@ -251,3 +251,26 @@ input:focus, select:focus { border-color: var(--accent); }
 
 /* Confetti canvas */
 .confetti-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 300; }
+
+/* ---------- v2 ---------- */
+.avatar-btn {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--card); border: 2px solid var(--line);
+  font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow); font-family: inherit;
+}
+
+.qnav {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--card); border-radius: 16px; box-shadow: var(--shadow);
+  padding: 8px 10px;
+}
+.qnav .btn.ghost.small { min-width: 42px; font-size: 18px; padding: 6px 10px; }
+
+.newcat-row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+
+.minibars {
+  display: flex; align-items: flex-end; gap: 2px; width: 100%;
+}
+.minibar-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.minibar { width: 100%; border-radius: 3px 3px 0 0; min-height: 1px; }

@@ -1,51 +1,18 @@
-import { useRef } from 'react'
 import { AppState } from '../types'
 import { ACHIEVEMENTS, LEVELS, levelOf, streak } from '../lib/gamification'
-import { exportBackup, importBackup } from '../lib/store'
 
-export function Logros({
-  state,
-  onReplaceState,
-  showToast,
-}: {
-  state: AppState
-  onReplaceState: (s: AppState) => void
-  showToast: (msg: string) => void
-}) {
-  const fileRef = useRef<HTMLInputElement>(null)
+export function Logros({ state, onVolver }: { state: AppState; onVolver: () => void }) {
   const lv = levelOf(state.xp)
   const racha = streak(state.txs)
   const desbloqueados = ACHIEVEMENTS.filter((a) => state.unlocked[a.id])
   const bloqueados = ACHIEVEMENTS.filter((a) => !state.unlocked[a.id])
 
-  const descargar = () => {
-    const blob = new Blob([exportBackup(state)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `mis-reales-respaldo-${new Date().toISOString().slice(0, 10)}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    showToast('📦 Respaldo descargado')
-  }
-
-  const importar = (file: File) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const s = importBackup(String(reader.result))
-      if (s) {
-        onReplaceState(s)
-        showToast('✅ Respaldo restaurado')
-      } else {
-        showToast('❌ Ese archivo no parece un respaldo válido')
-      }
-    }
-    reader.readAsText(file)
-  }
-
   return (
     <div className="screen">
-      <h1>Logros</h1>
+      <div className="header-row">
+        <h1>Logros</h1>
+        <button className="btn ghost small" onClick={onVolver}>‹ Volver</button>
+      </div>
       <div className="sub" style={{ marginBottom: 12 }}>Tu vitrina de trofeos 🏆</div>
 
       <div className="tiles">
@@ -83,7 +50,7 @@ export function Logros({
       )}
 
       <h2>Por desbloquear</h2>
-      <div className="logros-grid" style={{ marginBottom: 20 }}>
+      <div className="logros-grid">
         {bloqueados.map((a) => (
           <div className="logro locked" key={a.id}>
             <div className="em">{a.emoji}</div>
@@ -91,25 +58,6 @@ export function Logros({
             <div className="ds">{a.desc}</div>
           </div>
         ))}
-      </div>
-
-      <div className="card">
-        <h2>Tus datos</h2>
-        <div className="sub" style={{ marginBottom: 12 }}>
-          Todo vive solo en este teléfono. Descarga un respaldo de vez en cuando, por si acaso
-          (los gatos rompen cosas, los teléfonos también).
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn secondary" onClick={descargar}>📦 Descargar respaldo</button>
-          <button className="btn ghost" onClick={() => fileRef.current?.click()}>📥 Restaurar</button>
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/json"
-          style={{ display: 'none' }}
-          onChange={(e) => e.target.files?.[0] && importar(e.target.files[0])}
-        />
       </div>
     </div>
   )

@@ -1,13 +1,21 @@
-import { AppState, EMPTY_STATE } from '../types'
+import { AppState, EMPTY_STATE, DEFAULT_PROFILE } from '../types'
 
 const KEY = 'misreales:v1'
+
+function migrate(parsed: Record<string, unknown>): AppState {
+  const s: AppState = { ...EMPTY_STATE, ...parsed, version: 2 }
+  s.profile = { ...DEFAULT_PROFILE, ...(parsed.profile as object | undefined) }
+  if (!Array.isArray(s.customCats)) s.customCats = []
+  if (!Array.isArray(s.fixed)) s.fixed = []
+  s.fixed = s.fixed.map((f) => ({ ...f, resolved: f.resolved ?? {} }))
+  return s
+}
 
 export function loadState(): AppState {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return EMPTY_STATE
-    const parsed = JSON.parse(raw)
-    return { ...EMPTY_STATE, ...parsed }
+    return migrate(JSON.parse(raw))
   } catch {
     return EMPTY_STATE
   }
@@ -26,7 +34,7 @@ export function uid(): string {
 }
 
 export function exportBackup(s: AppState): string {
-  return JSON.stringify({ app: 'mis-reales', version: 1, exportedAt: new Date().toISOString(), data: s }, null, 2)
+  return JSON.stringify({ app: 'mis-reales', version: 2, exportedAt: new Date().toISOString(), data: s }, null, 2)
 }
 
 export function importBackup(json: string): AppState | null {
@@ -34,7 +42,7 @@ export function importBackup(json: string): AppState | null {
     const parsed = JSON.parse(json)
     const data = parsed?.data ?? parsed
     if (!Array.isArray(data.txs)) return null
-    return { ...EMPTY_STATE, ...data }
+    return migrate(data)
   } catch {
     return null
   }
