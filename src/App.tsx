@@ -2,6 +2,7 @@ import { useCallback, useMemo, useEffect, useState } from 'react'
 import { AppState, Tx, Goal, Debt, CustomCat, FixedExpense, Profile } from './types'
 import { loadState, saveState, uid } from './lib/store'
 import { checkAchievements, reaccion, streak } from './lib/gamification'
+import { fondoLibre } from './lib/savings'
 import { todayStr } from './lib/quincena'
 import { Confetti } from './components/Confetti'
 import { AddModal } from './components/AddModal'
@@ -20,7 +21,7 @@ const TABS: { id: Tab; ico: string; label: string }[] = [
   { id: 'movs', ico: '📒', label: 'Movimientos' },
   { id: 'informes', ico: '📊', label: 'Informes' },
   { id: 'plan', ico: '🗺️', label: 'Plan' },
-  { id: 'metas', ico: '🎯', label: 'Metas' },
+  { id: 'metas', ico: '🐷', label: 'Ahorro' },
 ]
 
 export default function App() {
@@ -66,6 +67,8 @@ export default function App() {
     () => Object.values(state.budgets).reduce((a, b) => a + b, 0),
     [state.budgets]
   )
+
+  const fondo = useMemo(() => fondoLibre(state), [state.txs])
 
   // ---------- Movimientos ----------
 
@@ -136,6 +139,25 @@ export default function App() {
     setEditTx(tx)
     setShowAdd(true)
   }, [])
+
+  // ---------- Ahorro (fondo libre) ----------
+
+  const addAhorro = useCallback(
+    (monto: number, dir: 'deposito' | 'retiro', note: string | undefined, date: string) => {
+      const tx: Tx =
+        dir === 'deposito'
+          ? { id: uid(), type: 'gasto', amount: monto, cat: 'ahorro', note, date, ts: Date.now(), ref: { kind: 'ahorro', id: 'libre' } }
+          : { id: uid(), type: 'ingreso', amount: monto, cat: 'retiro', note, date, ts: Date.now(), ref: { kind: 'ahorro', id: 'libre' } }
+      apply((s) => ({ ...s, txs: [tx, ...s.txs], xp: s.xp + (dir === 'deposito' ? 15 : 5) }), {
+        toast:
+          dir === 'deposito'
+            ? '🐷 ¡Depósito guardado! La alcancía ronronea.'
+            : '🫣 Retiro registrado. Nube hace como que no vio.',
+      })
+      setShowAdd(false)
+    },
+    [apply]
+  )
 
   // ---------- Categorías ----------
 
@@ -331,6 +353,7 @@ export default function App() {
           state={state}
           onVerLogros={() => setTab('logros')}
           onVerPerfil={() => setTab('perfil')}
+          onVerAhorro={() => setTab('metas')}
           onAgregar={() => setShowAdd(true)}
           onResolveFixed={resolveFixed}
         />
@@ -351,6 +374,8 @@ export default function App() {
       {tab === 'metas' && (
         <Metas
           state={state}
+          fondoLibre={fondo}
+          onAhorro={addAhorro}
           onAddGoal={addGoal}
           onAbonar={abonarGoal}
           onDeleteGoal={deleteGoal}
@@ -388,8 +413,10 @@ export default function App() {
         <AddModal
           state={state}
           editTx={editTx}
+          fondoLibre={fondo}
           onAdd={addTx}
           onUpdate={updateTx}
+          onAhorro={addAhorro}
           onCreateCat={createCat}
           onClose={closeModal}
         />

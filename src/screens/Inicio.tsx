@@ -3,18 +3,21 @@ import { AppState } from '../types'
 import { currentQuincena, prevQuincena, inQuincena, diasRestantes, quincenaOf, fmtFechaCorta } from '../lib/quincena'
 import { allGastoCats, fmtB, fmtB0 } from '../lib/categories'
 import { catMood, fraseDelGato, streak, levelOf, nextLevel, avisos, pendingFixed } from '../lib/gamification'
+import { fondoLibre, ahorroEnMetas } from '../lib/savings'
 import { Gato } from '../components/Gato'
 
 export function Inicio({
   state,
   onVerLogros,
   onVerPerfil,
+  onVerAhorro,
   onAgregar,
   onResolveFixed,
 }: {
   state: AppState
   onVerLogros: () => void
   onVerPerfil: () => void
+  onVerAhorro: () => void
   onAgregar: () => void
   onResolveFixed: (id: string, monthKey: string, action: 'pagado' | 'omitido') => void
 }) {
@@ -34,7 +37,8 @@ export function Inicio({
     return { gastado, ingresado, porCat }
   }, [state.txs, q.key])
 
-  // Patrimonio acumulado y su evolución por quincena (el ahorro sigue siendo tuyo)
+  // Patrimonio acumulado y su evolución por quincena (el ahorro sigue siendo tuyo;
+  // depósitos y retiros del fondo son transferencias, no cambian el total)
   const { patrimonio, serie } = useMemo(() => {
     const val = (hasta: string) => {
       let v = 0
@@ -43,6 +47,7 @@ export function Inicio({
         if (t.type === 'ingreso') v += t.amount
         else v -= t.amount
         if (t.type === 'gasto' && t.cat === 'ahorro') v += t.amount
+        if (t.type === 'ingreso' && t.cat === 'retiro') v -= t.amount
       }
       return v
     }
@@ -173,6 +178,21 @@ export function Inicio({
           </strong>
         </div>
       </div>
+
+      <button
+        className="card"
+        style={{ width: '100%', textAlign: 'left', border: 'none', font: 'inherit', cursor: 'pointer', display: 'block' }}
+        aria-label="Ver mi ahorro"
+        onClick={onVerAhorro}
+      >
+        <div className="row-between">
+          <h2 style={{ margin: 0 }}>🐷 Tu ahorro</h2>
+          <strong style={{ color: 'var(--verde)', fontSize: 17 }}>{fmtB(fondoLibre(state) + ahorroEnMetas(state))}</strong>
+        </div>
+        <div className="mini" style={{ marginTop: 6 }}>
+          Fondo libre: {fmtB(fondoLibre(state))} · En metas: {fmtB(ahorroEnMetas(state))} · toca para ver más ›
+        </div>
+      </button>
 
       <div className="card">
         <div className="row-between">

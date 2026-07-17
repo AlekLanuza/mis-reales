@@ -1,24 +1,32 @@
 import { useState } from 'react'
-import { AppState, Tx, TxType, CustomCat } from '../types'
-import { gastoCats, INGRESO_CATS } from '../lib/categories'
+import { AppState, Tx, CustomCat } from '../types'
+import { gastoCats, INGRESO_CATS, fmtB } from '../lib/categories'
 import { todayStr } from '../lib/quincena'
+
+type ModalType = 'gasto' | 'ingreso' | 'ahorro'
 
 export function AddModal({
   state,
   editTx,
+  fondoLibre,
   onAdd,
   onUpdate,
+  onAhorro,
   onCreateCat,
   onClose,
 }: {
   state: AppState
   editTx?: Tx
+  fondoLibre: number
   onAdd: (tx: Omit<Tx, 'id' | 'ts'>) => void
   onUpdate: (tx: Tx) => void
+  onAhorro: (monto: number, dir: 'deposito' | 'retiro', note: string | undefined, date: string) => void
   onCreateCat: (c: Omit<CustomCat, 'id'>) => string
   onClose: () => void
 }) {
-  const [type, setType] = useState<TxType>(editTx?.type ?? 'gasto')
+  const editEsAhorro = !!editTx && editTx.ref?.kind === 'ahorro'
+  const [type, setType] = useState<ModalType>(editEsAhorro ? 'ahorro' : editTx?.type ?? 'gasto')
+  const [dir, setDir] = useState<'deposito' | 'retiro'>(editTx?.cat === 'retiro' ? 'retiro' : 'deposito')
   const [amount, setAmount] = useState(editTx ? String(editTx.amount) : '')
   const [cat, setCat] = useState(editTx?.cat ?? '')
   const [note, setNote] = useState(editTx?.note ?? '')
@@ -29,21 +37,28 @@ export function AddModal({
 
   const cats = type === 'gasto' ? gastoCats(state) : INGRESO_CATS
   const monto = parseFloat(amount)
-  const valid = !isNaN(monto) && monto > 0 && cat !== '' && date !== ''
   const editing = !!editTx
   const esAuto = !!editTx?.ref && editTx.ref.kind !== 'fijo'
 
+  // Al retirar, no puedes sacar más de lo que hay en el fondo libre.
+  // Si editas un retiro, el fondo disponible incluye el monto original.
+  const maxRetiro = fondoLibre + (editEsAhorro && editTx?.cat === 'retiro' ? editTx.amount : 0)
+  const retiroExcede = type === 'ahorro' && dir === 'retiro' && !isNaN(monto) && monto > maxRetiro
+
+  const valid =
+    !isNaN(monto) && monto > 0 && date !== '' && !retiroExcede && (type === 'ahorro' || cat !== '')
+
   const submit = () => {
     if (!valid) return
-    const base = {
-      type,
-      amount: Math.round(monto * 100) / 100,
-      cat,
-      note: note.trim() || undefined,
-      date,
+    const monto2 = Math.round(monto * 100) / 100
+    const nota = note.trim() || undefined
+    if (type === 'ahorro' && !editing) {
+      onAhorro(monto2, dir, nota, date)
+      return
     }
-    if (editTx) onUpdate({ ...editTx, ...base })
-    else onAdd(base)
+    const base = { amount: monto2, note: nota, date }
+    if (editTx) onUpdate({ ...editTx, ...base, ...(esAuto ? {} : { type: type as 'gasto' | 'ingreso', cat }) })
+    else onAdd({ type: type as 'gasto' | 'ingreso', cat, ...base })
   }
 
   const crearCat = () => {
@@ -57,28 +72,68 @@ export function AddModal({
     setNewEmoji('')
   }
 
+  const titulo = editing
+    ? 'Editar movimiento'
+    : type === 'gasto'
+      ? '¿En qué gastaste?'
+      : type === 'ingreso'
+        ? '¿Cuánto entró?'
+        : dir === 'deposito'
+          ? '¿Cuánto guardamos?'
+          : '¿Cuánto sacamos?'
+
   return (
     <div className="sheet-back" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="sheet">
         <div className="row-between" style={{ marginBottom: 14 }}>
-          <h2>{editing ? 'Editar movimiento' : type === 'gasto' ? '¿En qué gastaste?' : '¿Cuánto entró?'}</h2>
+          <h2>{titulo}</h2>
           <button className="btn ghost small" onClick={onClose}>✕</button>
         </div>
 
-        {!esAuto && (
+        {!esAuto && !editing && (
           <div className="seg">
-            <button className={type === 'gasto' ? 'on gasto' : ''} onClick={() => { setType('gasto'); if (!editing) setCat('') }}>
+            <button className={type === 'gasto' ? 'on gasto' : ''} onClick={() => { setType('gasto'); setCat('') }}>
               💸 Gasto
             </button>
-            <button className={type === 'ingreso' ? 'on ingreso' : ''} onClick={() => { setType('ingreso'); if (!editing) setCat('') }}>
+            <button className={type === 'ingreso' ? 'on ingreso' : ''} onClick={() => { setType('ingreso'); setCat('') }}>
               🤑 Ingreso
+            </button>
+            <button className={type === 'ahorro' ? 'on ingreso' : ''} onClick={() => { setType('ahorro'); setCat('') }}>
+              🐷 Ahorro
             </button>
           </div>
         )}
         {esAuto && (
           <div className="mini" style={{ marginBottom: 12 }}>
-            Este movimiento viene de {editTx!.ref!.kind === 'deuda' ? 'un pago de deuda' : 'un abono a una meta'}; puedes
-            corregir el monto, la nota o la fecha.
+            Este movimiento viene de{' '}
+            {editTx!.ref!.kind === 'deuda'
+              ? 'un pago de deuda'
+              : editTx!.ref!.kind === 'meta'
+                ? 'un abono a una meta'
+                : editTx!.cat === 'retiro'
+                  ? 'un retiro de tu fondo de ahorro'
+                  : 'un depósito a tu fondo de ahorro'}
+            ; puedes corregir el monto, la nota o la fecha.
+          </div>
+        )}
+
+        {type === 'ahorro' && !editing && (
+          <div className="seg">
+            <button className={dir === 'deposito' ? 'on ingreso' : ''} onClick={() => setDir('deposito')}>
+              ⬇️ Depositar
+            </button>
+            <button className={dir === 'retiro' ? 'on gasto' : ''} onClick={() => setDir('retiro')}>
+              ⬆️ Retirar
+            </button>
+          </div>
+        )}
+
+        {type === 'ahorro' && !editing && (
+          <div className="mini" style={{ marginBottom: 12 }}>
+            🐷 Tu fondo libre tiene {fmtB(fondoLibre)}.
+            {dir === 'deposito'
+              ? ' El depósito descuenta de tu disponible de la quincena.'
+              : ' El retiro vuelve a estar disponible para gastar.'}
           </div>
         )}
 
@@ -97,9 +152,14 @@ export function AddModal({
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
+          {retiroExcede && (
+            <div className="mini" style={{ color: 'var(--rojo)', fontWeight: 800, marginTop: 6 }}>
+              No puedes retirar más de {fmtB(maxRetiro)}. Nube protege la alcancía. 😾
+            </div>
+          )}
         </div>
 
-        {!esAuto && (
+        {!esAuto && type !== 'ahorro' && (
           <div className="field">
             <label>Categoría</label>
             <div className="chips">
@@ -142,7 +202,9 @@ export function AddModal({
           <label>Nota (opcional)</label>
           <input
             type="text"
-            placeholder={type === 'gasto' ? 'Ej: pizza con los panas' : 'Ej: quincena'}
+            placeholder={
+              type === 'gasto' ? 'Ej: pizza con los panas' : type === 'ingreso' ? 'Ej: quincena' : 'Ej: para el fondo de emergencia'
+            }
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
@@ -154,7 +216,15 @@ export function AddModal({
         </div>
 
         <button className="btn" disabled={!valid} style={{ opacity: valid ? 1 : 0.4 }} onClick={submit}>
-          {editing ? 'Guardar cambios ✓' : type === 'gasto' ? 'Anotar gasto 🐾' : 'Anotar ingreso 🎉'}
+          {editing
+            ? 'Guardar cambios ✓'
+            : type === 'gasto'
+              ? 'Anotar gasto 🐾'
+              : type === 'ingreso'
+                ? 'Anotar ingreso 🎉'
+                : dir === 'deposito'
+                  ? 'Depositar al ahorro 🐷'
+                  : 'Retirar del ahorro 🫣'}
         </button>
       </div>
     </div>

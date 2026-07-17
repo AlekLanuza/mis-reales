@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { AppState, Goal, Debt } from '../types'
 import { fmtB } from '../lib/categories'
+import { ahorroEnMetas } from '../lib/savings'
+import { todayStr } from '../lib/quincena'
 
 const GOAL_EMOJIS = ['✈️', '🏖️', '🚗', '📱', '🏠', '🎓', '💍', '🛟', '🎁', '🐱']
 
 export function Metas({
   state,
+  fondoLibre,
+  onAhorro,
   onAddGoal,
   onAbonar,
   onDeleteGoal,
@@ -14,6 +18,8 @@ export function Metas({
   onDeleteDebt,
 }: {
   state: AppState
+  fondoLibre: number
+  onAhorro: (monto: number, dir: 'deposito' | 'retiro', note: string | undefined, date: string) => void
   onAddGoal: (g: Omit<Goal, 'id' | 'saved'>) => void
   onAbonar: (id: string, monto: number) => void
   onDeleteGoal: (id: string) => void
@@ -31,6 +37,21 @@ export function Metas({
   const [objetivo, setObjetivo] = useState('')
   const [emoji, setEmoji] = useState('✈️')
   const [emojiLibre, setEmojiLibre] = useState('')
+
+  const [fondoDir, setFondoDir] = useState<'deposito' | 'retiro' | null>(null)
+  const [fondoMonto, setFondoMonto] = useState('')
+
+  const enMetas = ahorroEnMetas(state)
+  const total = fondoLibre + enMetas
+
+  const moverFondo = () => {
+    const v = parseFloat(fondoMonto)
+    if (!fondoDir || isNaN(v) || v <= 0) return
+    if (fondoDir === 'retiro' && v > fondoLibre) return
+    onAhorro(Math.round(v * 100) / 100, fondoDir, undefined, todayStr())
+    setFondoDir(null)
+    setFondoMonto('')
+  }
 
   const resetForm = () => { setNombre(''); setObjetivo(''); setEmoji('✈️'); setEmojiLibre(''); setShowNew(false) }
 
@@ -60,13 +81,71 @@ export function Metas({
       ? state.goals.map((g) => ({ id: g.id, name: g.name, emoji: g.emoji, done: g.saved >= g.target, cur: g.saved, target: g.target }))
       : state.debts.map((d) => ({ id: d.id, name: d.name, emoji: '⚔️', done: d.paid >= d.total, cur: d.paid, target: d.total }))
 
+  const retiroInvalido = fondoDir === 'retiro' && parseFloat(fondoMonto) > fondoLibre
+
   return (
     <div className="screen">
-      <h1>{vista === 'metas' ? 'Metas de ahorro' : 'Deudas'}</h1>
-      <div className="sub" style={{ marginBottom: 12 }}>
-        {vista === 'metas'
-          ? 'Sueños con fecha de entrega 🌟 (los abonos quedan en Movimientos)'
-          : 'Aquí se vienen a morir las deudas ⚔️ (los pagos quedan en Movimientos)'}
+      <h1>Tu ahorro</h1>
+      <div className="sub" style={{ marginBottom: 12 }}>La plata que tu yo del futuro te va a agradecer 🐷</div>
+
+      <div className="tile hero" style={{ marginBottom: 14 }}>
+        <div className="label">Ahorro total</div>
+        <div className="value">{fmtB(total)}</div>
+        <div className="sub-line">
+          🐷 Fondo libre: {fmtB(fondoLibre)} · 🎯 En metas: {fmtB(enMetas)}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="row-between">
+          <strong>🐷 Fondo libre</strong>
+          <strong>{fmtB(fondoLibre)}</strong>
+        </div>
+        <div className="mini" style={{ margin: '4px 0 10px' }}>
+          Ahorro sin destino fijo. Deposita desde aquí o con el botón +.
+        </div>
+        {fondoDir ? (
+          <>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <div className="amount-input" style={{ flex: 1 }}>
+                <span>B/.</span>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  autoFocus
+                  placeholder="0.00"
+                  min="0"
+                  value={fondoMonto}
+                  onChange={(e) => setFondoMonto(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && moverFondo()}
+                />
+              </div>
+              <button className="btn small verde" style={{ opacity: retiroInvalido ? 0.4 : 1 }} onClick={moverFondo}>
+                {fondoDir === 'deposito' ? 'Depositar ✓' : 'Retirar ✓'}
+              </button>
+              <button className="btn ghost small" onClick={() => { setFondoDir(null); setFondoMonto('') }}>✕</button>
+            </div>
+            {retiroInvalido && (
+              <div className="mini" style={{ color: 'var(--rojo)', fontWeight: 800, marginTop: 6 }}>
+                No puedes retirar más de {fmtB(fondoLibre)}. 😾
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn secondary small" style={{ flex: 1 }} onClick={() => setFondoDir('deposito')}>
+              ⬇️ Depositar
+            </button>
+            <button
+              className="btn ghost small"
+              style={{ flex: 1, opacity: fondoLibre > 0 ? 1 : 0.4 }}
+              disabled={fondoLibre <= 0}
+              onClick={() => setFondoDir('retiro')}
+            >
+              ⬆️ Retirar
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="seg">

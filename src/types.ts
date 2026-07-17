@@ -8,8 +8,8 @@ export interface Tx {
   note?: string
   date: string // YYYY-MM-DD
   ts: number
-  /** origen automático: pago de deuda o abono a meta */
-  ref?: { kind: 'deuda' | 'meta' | 'fijo'; id: string }
+  /** origen automático: pago de deuda, abono a meta, gasto fijo o fondo de ahorro */
+  ref?: { kind: 'deuda' | 'meta' | 'fijo' | 'ahorro'; id: string }
 }
 
 export interface Goal {

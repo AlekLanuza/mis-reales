@@ -26,9 +26,10 @@ export const GASTO_CATS: Category[] = [
   { id: 'otros', name: 'Otros', emoji: '✨', color: PALETTE[7], builtin: true },
 ]
 
-// Categorías especiales para pagos automáticos (deudas y ahorro a metas)
+// Categorías especiales para pagos automáticos (deudas, ahorro y retiros)
 export const CAT_DEUDA: Category = { id: 'deuda', name: 'Deudas', emoji: '⚔️', color: '#898781', builtin: true }
 export const CAT_AHORRO: Category = { id: 'ahorro', name: 'Ahorro', emoji: '🐷', color: '#57c48f', builtin: true }
+export const CAT_RETIRO: Category = { id: 'retiro', name: 'Retiro de ahorro', emoji: '🐷', color: '#57c48f', builtin: true }
 
 export const INGRESO_CATS: Category[] = [
   { id: 'salario', name: 'Salario', emoji: '💼', color: PALETTE[1], builtin: true },
@@ -51,6 +52,7 @@ export function allGastoCats(state: AppState): Category[] {
 }
 
 export function catById(state: AppState, id: string): Category {
+  if (id === CAT_RETIRO.id) return CAT_RETIRO
   return (
     allGastoCats(state).find((c) => c.id === id) ??
     INGRESO_CATS.find((c) => c.id === id) ??

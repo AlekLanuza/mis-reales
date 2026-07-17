@@ -109,6 +109,15 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'creativo', name: 'Creativo', desc: 'Creaste tu primera categoría propia', emoji: '🎨', test: (s) => s.customCats.length >= 1 },
   { id: 'ordenado', name: 'Todo en Orden', desc: 'Definiste tu primer gasto fijo', emoji: '📌', test: (s) => s.fixed.length >= 1 },
   { id: 'identidad', name: 'Mucho Gusto', desc: 'Completaste tu perfil', emoji: '🪪', test: (s) => s.profile.name.trim().length > 0 },
+  { id: 'alcancia', name: 'Alcancía Viva', desc: 'Tu primer depósito al fondo de ahorro', emoji: '🏦', test: (s) => s.txs.some((t) => t.type === 'gasto' && t.cat === 'ahorro' && t.ref?.kind === 'ahorro') },
+  { id: 'colchon', name: 'Colchón Suave', desc: 'Juntaste B/. 200 de ahorro total', emoji: '🛏️', test: (s) => {
+    let fondo = 0
+    for (const t of s.txs) {
+      if (t.type === 'gasto' && t.cat === 'ahorro' && t.ref?.kind !== 'meta') fondo += t.amount
+      else if (t.type === 'ingreso' && t.cat === 'retiro') fondo -= t.amount
+    }
+    return fondo + s.goals.reduce((a, g) => a + g.saved, 0) >= 200
+  } },
 ]
 
 /** Devuelve los logros recién desbloqueados y el estado actualizado. */
