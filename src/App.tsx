@@ -17,7 +17,7 @@ type Tab = 'inicio' | 'movs' | 'informes' | 'plan' | 'metas' | 'logros' | 'perfi
 
 const TABS: { id: Tab; ico: string; label: string }[] = [
   { id: 'inicio', ico: '🏠', label: 'Inicio' },
-  { id: 'movs', ico: '📒', label: 'Movs' },
+  { id: 'movs', ico: '📒', label: 'Movimientos' },
   { id: 'informes', ico: '📊', label: 'Informes' },
   { id: 'plan', ico: '🗺️', label: 'Plan' },
   { id: 'metas', ico: '🎯', label: 'Metas' },
@@ -371,21 +371,17 @@ export default function App() {
       )}
 
       <nav className="tabbar">
-        {TABS.slice(0, 2).map((t) => (
-          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
-            <span className="ico">{t.ico}</span>
-            {t.label}
-          </button>
-        ))}
         <button className="fab" aria-label="Agregar movimiento" onClick={() => { setEditTx(undefined); setShowAdd(true) }}>
           +
         </button>
-        {TABS.slice(2).map((t) => (
-          <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
-            <span className="ico">{t.ico}</span>
-            {t.label}
-          </button>
-        ))}
+        <div className="tabs-row">
+          {TABS.map((t) => (
+            <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
+              <span className="ico">{t.ico}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
       </nav>
 
       {showAdd && (
